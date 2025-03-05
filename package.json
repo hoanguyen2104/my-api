@@ -8,6 +8,7 @@
   "dependencies": {
     "@googleapis/drive": "^8.16.0",
     "express": "^4.17.1",
+    "google-auth-library": "^9.15.1",
     "multer": "^1.4.5-lts.1"
   }
 }
