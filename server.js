@@ -15,14 +15,14 @@ const driveClient = drive({ version: "v3", auth });
 // ID thư mục trên Google Drive
 const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 
-// Tải dữ liệu từ Google Drive
-async function loadPosts() {
+// Tải dữ liệu từ Google Drive (chung cho posts và users)
+async function loadFromDrive(filename) {
   try {
     const res = await driveClient.files.list({
       q: `'${FOLDER_ID}' in parents`,
       fields: "files(id, name)",
     });
-    const file = res.data.files.find((f) => f.name === "posts.json");
+    const file = res.data.files.find((f) => f.name === filename);
     if (file) {
       const fileData = await driveClient.files.get(
         { fileId: file.id, alt: "media" },
@@ -33,46 +33,43 @@ async function loadPosts() {
         fileData.data
           .on("data", (chunk) => (data += chunk))
           .on("end", () => {
-            console.log("Loaded posts from Drive:", data);
+            console.log(`Loaded ${filename} from Drive:`, data);
             if (!data || data.trim() === "") {
-              console.log("posts.json is empty, returning empty array");
+              console.log(`${filename} is empty, returning empty array`);
               resolve([]);
             } else {
               try {
                 resolve(JSON.parse(data));
               } catch (parseError) {
-                console.error("Error parsing posts.json:", parseError.message);
+                console.error(`Error parsing ${filename}:`, parseError.message);
                 resolve([]);
               }
             }
           })
           .on("error", (err) => {
-            console.error("Error reading posts from Drive:", err.message);
+            console.error(`Error reading ${filename} from Drive:`, err.message);
             resolve([]);
           });
       });
     } else {
-      console.log("posts.json not found on Drive, starting with empty array");
+      console.log(`${filename} not found on Drive, starting with empty array`);
       return [];
     }
   } catch (error) {
-    console.error("Error loading posts from Drive:", error.message);
+    console.error(`Error loading ${filename} from Drive:`, error.message);
     return [];
   }
 }
 
-// Lưu dữ liệu lên Google Drive
-async function savePosts(posts) {
+// Lưu dữ liệu lên Google Drive (chung cho posts và users)
+async function saveToDrive(filename, data) {
   try {
-    const fileContent = JSON.stringify(posts, null, 2);
-    if (!fileContent || fileContent === "[]") {
-      console.log("No posts to save or empty array");
-    }
+    const fileContent = JSON.stringify(data, null, 2);
     const res = await driveClient.files.list({
       q: `'${FOLDER_ID}' in parents`,
       fields: "files(id, name)",
     });
-    const file = res.data.files.find((f) => f.name === "posts.json");
+    const file = res.data.files.find((f) => f.name === filename);
 
     if (file) {
       await driveClient.files.update({
@@ -82,11 +79,11 @@ async function savePosts(posts) {
           body: fileContent,
         },
       });
-      console.log("Updated posts.json on Drive, file ID:", file.id);
+      console.log(`Updated ${filename} on Drive, file ID:`, file.id);
     } else {
       const newFile = await driveClient.files.create({
         resource: {
-          name: "posts.json",
+          name: filename,
           parents: [FOLDER_ID],
         },
         media: {
@@ -94,19 +91,25 @@ async function savePosts(posts) {
           body: fileContent,
         },
       });
-      console.log("Created posts.json on Drive, file ID:", newFile.data.id);
+      console.log(`Created ${filename} on Drive, file ID:`, newFile.data.id);
     }
   } catch (error) {
-    console.error("Error saving posts to Drive:", error.message);
+    console.error(`Error saving ${filename} to Drive:`, error.message);
   }
 }
 
-// Khởi tạo danh sách bài viết
+// Khởi tạo danh sách bài viết và người dùng
 let posts = [];
-loadPosts().then((loadedPosts) => {
-  posts = loadedPosts;
-  console.log("Initial posts loaded:", posts.length);
-});
+let users = [];
+
+Promise.all([loadFromDrive("posts.json"), loadFromDrive("users.json")]).then(
+  ([loadedPosts, loadedUsers]) => {
+    posts = loadedPosts;
+    users = loadedUsers;
+    console.log("Initial posts loaded:", posts.length);
+    console.log("Initial users loaded:", users.length);
+  }
+);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -128,11 +131,68 @@ app.options("*", (req, res) => {
   res.sendStatus(200);
 });
 
-// Lấy danh sách bài viết
+// Đăng ký người dùng
+app.post("/register", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username và password là bắt buộc" });
+    }
+    if (users.find((u) => u.username === username)) {
+      return res.status(400).json({ message: "Username đã tồn tại" });
+    }
+
+    const newUser = { username, password };
+    users.push(newUser);
+    await saveToDrive("users.json", users);
+    console.log("Registered user:", newUser);
+    res.status(201).json({ message: "Đăng ký thành công", username });
+  } catch (error) {
+    console.error("Error registering user:", error.message);
+    res.status(500).json({ message: "Lỗi server khi đăng ký" });
+  }
+});
+
+// Đăng nhập người dùng
+app.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username và password là bắt buộc" });
+    }
+
+    const user = users.find((u) => u.username === username && u.password === password);
+    if (!user) {
+      return res.status(401).json({ message: "Username hoặc password không đúng" });
+    }
+
+    console.log("User logged in:", username);
+    res.status(200).json({ message: "Đăng nhập thành công", username });
+  } catch (error) {
+    console.error("Error logging in:", error.message);
+    res.status(500).json({ message: "Lỗi server khi đăng nhập" });
+  }
+});
+
+// Lấy danh sách bài viết theo trang
 app.get("/posts", (req, res) => {
   try {
-    console.log("Fetched posts:", posts.length);
-    res.json(posts);
+    const page = parseInt(req.query.page) || 1; // Trang hiện tại, mặc định là 1
+    const limit = parseInt(req.query.limit) || 5; // Số bài viết mỗi trang, mặc định là 5
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+
+    const paginatedPosts = posts.slice(startIndex, endIndex);
+    const totalPosts = posts.length;
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    console.log(`Fetched posts: page ${page}, limit ${limit}, total ${totalPosts}`);
+    res.json({
+      posts: paginatedPosts,
+      totalPosts: totalPosts,
+      totalPages: totalPages,
+      currentPage: page,
+    });
   } catch (error) {
     console.error("Error fetching posts:", error.message);
     res.status(500).json({ message: "Lỗi server khi lấy bài viết", error: error.message });
@@ -159,7 +219,7 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async
     };
 
     posts.push(newPost);
-    await savePosts(posts);
+    await saveToDrive("posts.json", posts);
     console.log("Created post:", newPost);
     res.status(201).json(newPost);
   } catch (error) {
@@ -176,7 +236,7 @@ app.patch("/posts/:id", async (req, res) => {
     const post = posts.find((p) => p.id === id);
     if (post) {
       Object.assign(post, req.body);
-      await savePosts(posts);
+      await saveToDrive("posts.json", posts);
       console.log("Updated post:", post);
       res.json(post);
     } else {
@@ -195,7 +255,7 @@ app.delete("/posts/:id", async (req, res) => {
     const postIndex = posts.findIndex((p) => p.id === id);
     if (postIndex !== -1) {
       posts.splice(postIndex, 1);
-      await savePosts(posts);
+      await saveToDrive("posts.json", posts);
       console.log(`Deleted post with id: ${id}`);
       res.status(204).send();
     } else {
