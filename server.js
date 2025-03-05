@@ -8,13 +8,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Khởi tạo Google Drive API với Service Account
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, "myposts.json"), // Đường dẫn tới file JSON Service Account
+  keyFile: path.join(__dirname, "./mydriveapi-452814-f836bbf65aeb.json"), // Đường dẫn tới file JSON Service Account
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 const drive = google.drive({ version: "v3", auth });
 
 // ID thư mục trên Google Drive
-const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
+const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe"; // Thay bằng Folder ID của bạn
 
 // Tải dữ liệu từ Google Drive
 async function loadPosts() {
