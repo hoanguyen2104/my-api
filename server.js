@@ -19,8 +19,8 @@ const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 async function loadPosts() {
   try {
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents name:posts.json`, // Sửa cú pháp tìm kiếm
-      fields: "files(id, name)",
+      q: `'${FOLDER_ID}' in parents`, // Chỉ tìm trong thư mục FOLDER_ID
+      fields: "files(id, name)", // Lấy id và tên file
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
     if (file) {
@@ -56,7 +56,7 @@ async function savePosts(posts) {
   try {
     const fileContent = JSON.stringify(posts, null, 2);
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents name:posts.json`, // Sửa cú pháp tìm kiếm
+      q: `'${FOLDER_ID}' in parents`, // Chỉ tìm trong thư mục FOLDER_ID
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
@@ -71,7 +71,7 @@ async function savePosts(posts) {
       });
       console.log("Updated posts.json on Drive, file ID:", file.id);
     } else {
-      await driveClient.files.create({
+      const newFile = await driveClient.files.create({
         resource: {
           name: "posts.json",
           parents: [FOLDER_ID],
@@ -81,7 +81,7 @@ async function savePosts(posts) {
           body: fileContent,
         },
       });
-      console.log("Created posts.json on Drive");
+      console.log("Created posts.json on Drive, file ID:", newFile.data.id);
     }
   } catch (error) {
     console.error("Error saving posts to Drive:", error.message);
