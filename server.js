@@ -5,17 +5,14 @@ const { GoogleAuth } = require("google-auth-library");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Khởi tạo Google Drive API với Service Account từ biến môi trường
 const auth = new GoogleAuth({
   credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 const driveClient = drive({ version: "v3", auth });
 
-// ID thư mục trên Google Drive
 const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 
-// Tải dữ liệu từ Google Drive (chung cho posts và users)
 async function loadFromDrive(filename) {
   try {
     const res = await driveClient.files.list({
@@ -61,7 +58,6 @@ async function loadFromDrive(filename) {
   }
 }
 
-// Lưu dữ liệu lên Google Drive (chung cho posts và users)
 async function saveToDrive(filename, data) {
   try {
     const fileContent = JSON.stringify(data, null, 2);
@@ -98,7 +94,6 @@ async function saveToDrive(filename, data) {
   }
 }
 
-// Khởi tạo danh sách bài viết và người dùng
 let posts = [];
 let users = [];
 
@@ -114,7 +109,6 @@ Promise.all([loadFromDrive("posts.json"), loadFromDrive("users.json")]).then(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -123,7 +117,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Xử lý yêu cầu OPTIONS (preflight)
 app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -131,18 +124,22 @@ app.options("*", (req, res) => {
   res.sendStatus(200);
 });
 
-// Đăng ký người dùng
-app.post("/register", async (req, res) => {
+app.post("/register", upload.single("avatar"), async (req, res) => {
   try {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username và password là bắt buộc" });
+    const { username, password, displayName } = req.body;
+    if (!username || !password || !displayName) {
+      return res.status(400).json({ message: "Username, password và tên hiển thị là bắt buộc" });
     }
     if (users.find((u) => u.username === username)) {
       return res.status(400).json({ message: "Username đã tồn tại" });
     }
 
-    const newUser = { username, password };
+    const newUser = {
+      username,
+      password,
+      displayName,
+      avatar: req.file ? req.file.buffer.toString("base64") : null,
+    };
     users.push(newUser);
     await saveToDrive("users.json", users);
     console.log("Registered user:", newUser);
@@ -153,7 +150,6 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Đăng nhập người dùng
 app.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -167,18 +163,17 @@ app.post("/login", async (req, res) => {
     }
 
     console.log("User logged in:", username);
-    res.status(200).json({ message: "Đăng nhập thành công", username });
+    res.status(200).json({ message: "Đăng nhập thành công", user: { username, displayName: user.displayName, avatar: user.avatar } });
   } catch (error) {
     console.error("Error logging in:", error.message);
     res.status(500).json({ message: "Lỗi server khi đăng nhập" });
   }
 });
 
-// Lấy danh sách bài viết theo trang
 app.get("/posts", (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1; // Trang hiện tại, mặc định là 1
-    const limit = parseInt(req.query.limit) || 5; // Số bài viết mỗi trang, mặc định là 5
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
 
@@ -199,22 +194,20 @@ app.get("/posts", (req, res) => {
   }
 });
 
-// Tạo bài viết mới
-app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async (req, res) => {
+app.post("/posts", upload.single("image"), async (req, res) => {
   try {
     console.log("POST /posts - Request body:", req.body);
     console.log("POST /posts - Request files:", req.files);
 
     const newPost = {
       id: Date.now().toString(),
-      name: req.body.name || "Anonymous",
+      name: req.body.name,
       content: req.body.content || "",
       likes: parseInt(req.body.likes) || 0,
       comments: parseInt(req.body.comments) || 0,
       codePass: req.body.codePass || "",
       time: req.body.time || new Date().toISOString(),
-      avatar: req.files && req.files.avatar ? req.files.avatar[0].buffer.toString("base64") : null,
-      image: req.files && req.files.image ? req.files.image[0].buffer.toString("base64") : null,
+      image: req.file ? req.file.buffer.toString("base64") : null,
       commentsList: [],
     };
 
@@ -228,7 +221,45 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async
   }
 });
 
-// Cập nhật bài viết
+app.patch("/posts/:id/like", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const post = posts.find((p) => p.id === id);
+    if (post) {
+      post.likes += 1;
+      await saveToDrive("posts.json", posts);
+      console.log(`Liked post ${id}, new likes: ${post.likes}`);
+      res.json(post);
+    } else {
+      res.status(404).json({ message: "Bài viết không tồn tại" });
+    }
+  } catch (error) {
+    console.error("Error liking post:", error.message);
+    res.status(500).json({ message: "Lỗi server khi thích bài viết" });
+  }
+});
+
+app.post("/posts/:id/comment", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    const post = posts.find((p) => p.id === id);
+    if (post) {
+      const newComment = { name: req.body.name, text, codePass: Math.random().toString() };
+      post.commentsList.push(newComment);
+      post.comments += 1;
+      await saveToDrive("posts.json", posts);
+      console.log(`Commented on post ${id}, new comment:`, newComment);
+      res.status(201).json(newComment);
+    } else {
+      res.status(404).json({ message: "Bài viết không tồn tại" });
+    }
+  } catch (error) {
+    console.error("Error commenting on post:", error.message);
+    res.status(500).json({ message: "Lỗi server khi bình luận" });
+  }
+});
+
 app.patch("/posts/:id", async (req, res) => {
   try {
     console.log(`PATCH /posts/${req.params.id} - Request body:`, req.body);
@@ -248,7 +279,6 @@ app.patch("/posts/:id", async (req, res) => {
   }
 });
 
-// Xóa bài viết
 app.delete("/posts/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -267,7 +297,6 @@ app.delete("/posts/:id", async (req, res) => {
   }
 });
 
-// Endpoint kiểm tra mật khẩu admin
 app.post("/admin/login", (req, res) => {
   try {
     const { password } = req.body;
