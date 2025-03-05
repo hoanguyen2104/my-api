@@ -1,36 +1,35 @@
 const express = require("express");
 const multer = require("multer");
-const mongoose = require("mongoose"); // Đảm bảo dùng mongoose, không phải mongodb
+const fs = require("fs"); // Module để đọc/ghi file
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Kết nối MongoDB Atlas
-mongoose
-  .connect("mongodb+srv://admin:Hoangn123!@cluster0.mongodb.net/blog?retryWrites=true&w=majority", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => {
-    console.error("MongoDB connection error:", err.message);
-    process.exit(1);
-  });
+// Đường dẫn tới file JSON
+const DATA_FILE = "posts.json";
 
-// Định nghĩa schema cho bài viết
-const postSchema = new mongoose.Schema({
-  id: { type: String, unique: true, required: true },
-  name: { type: String, default: "Anonymous" },
-  content: { type: String, default: "" },
-  likes: { type: Number, default: 0 },
-  comments: { type: Number, default: 0 },
-  codePass: { type: String, default: "" },
-  time: { type: String, default: new Date().toISOString() },
-  avatar: { type: String, default: null },
-  image: { type: String, default: null },
-  commentsList: [{ name: String, text: String, codePass: String }],
-});
+// Khởi tạo danh sách bài viết từ file JSON, nếu không tồn tại thì dùng mảng rỗng
+let posts = [];
+if (fs.existsSync(DATA_FILE)) {
+  try {
+    const fileData = fs.readFileSync(DATA_FILE, "utf8");
+    posts = JSON.parse(fileData);
+  } catch (error) {
+    console.error("Error reading posts.json:", error.message);
+    posts = [];
+  }
+} else {
+  console.log("posts.json not found, starting with empty array");
+}
 
-const Post = mongoose.model("Post", postSchema);
+// Hàm lưu dữ liệu vào file JSON
+const savePosts = () => {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(posts, null, 2));
+    console.log("Posts saved to posts.json");
+  } catch (error) {
+    console.error("Error saving posts to posts.json:", error.message);
+  }
+};
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -53,9 +52,8 @@ app.options("*", (req, res) => {
 });
 
 // Lấy danh sách bài viết
-app.get("/posts", async (req, res) => {
+app.get("/posts", (req, res) => {
   try {
-    const posts = await Post.find();
     console.log("Fetched posts:", posts.length);
     res.json(posts);
   } catch (error) {
@@ -65,12 +63,12 @@ app.get("/posts", async (req, res) => {
 });
 
 // Tạo bài viết mới
-app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async (req, res) => {
+app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), (req, res) => {
   try {
     console.log("POST /posts - Request body:", req.body);
     console.log("POST /posts - Request files:", req.files);
 
-    const newPost = new Post({
+    const newPost = {
       id: Date.now().toString(),
       name: req.body.name || "Anonymous",
       content: req.body.content || "",
@@ -81,9 +79,10 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async
       avatar: req.files && req.files.avatar ? req.files.avatar[0].buffer.toString("base64") : null,
       image: req.files && req.files.image ? req.files.image[0].buffer.toString("base64") : null,
       commentsList: [],
-    });
+    };
 
-    await newPost.save();
+    posts.push(newPost);
+    savePosts();
     console.log("Created post:", newPost);
     res.status(201).json(newPost);
   } catch (error) {
@@ -93,14 +92,14 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async
 });
 
 // Cập nhật bài viết
-app.patch("/posts/:id", async (req, res) => {
+app.patch("/posts/:id", (req, res) => {
   try {
     console.log(`PATCH /posts/${req.params.id} - Request body:`, req.body);
     const { id } = req.params;
-    const post = await Post.findOne({ id });
+    const post = posts.find((p) => p.id === id);
     if (post) {
       Object.assign(post, req.body);
-      await post.save();
+      savePosts();
       console.log("Updated post:", post);
       res.json(post);
     } else {
@@ -113,11 +112,13 @@ app.patch("/posts/:id", async (req, res) => {
 });
 
 // Xóa bài viết
-app.delete("/posts/:id", async (req, res) => {
+app.delete("/posts/:id", (req, res) => {
   try {
     const { id } = req.params;
-    const result = await Post.deleteOne({ id });
-    if (result.deletedCount > 0) {
+    const postIndex = posts.findIndex((p) => p.id === id);
+    if (postIndex !== -1) {
+      posts.splice(postIndex, 1);
+      savePosts();
       console.log(`Deleted post with id: ${id}`);
       res.status(204).send();
     } else {
