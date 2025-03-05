@@ -19,8 +19,8 @@ const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 async function loadPosts() {
   try {
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents`, // Chỉ tìm trong thư mục FOLDER_ID
-      fields: "files(id, name)", // Lấy id và tên file
+      q: `'${FOLDER_ID}' in parents`,
+      fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
     if (file) {
@@ -34,7 +34,17 @@ async function loadPosts() {
           .on("data", (chunk) => (data += chunk))
           .on("end", () => {
             console.log("Loaded posts from Drive:", data);
-            resolve(JSON.parse(data));
+            if (!data || data.trim() === "") {
+              console.log("posts.json is empty, returning empty array");
+              resolve([]);
+            } else {
+              try {
+                resolve(JSON.parse(data));
+              } catch (parseError) {
+                console.error("Error parsing posts.json:", parseError.message);
+                resolve([]);
+              }
+            }
           })
           .on("error", (err) => {
             console.error("Error reading posts from Drive:", err.message);
@@ -55,8 +65,11 @@ async function loadPosts() {
 async function savePosts(posts) {
   try {
     const fileContent = JSON.stringify(posts, null, 2);
+    if (!fileContent || fileContent === "[]") {
+      console.log("No posts to save or empty array");
+    }
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents`, // Chỉ tìm trong thư mục FOLDER_ID
+      q: `'${FOLDER_ID}' in parents`,
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
