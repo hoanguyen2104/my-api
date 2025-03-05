@@ -1,31 +1,32 @@
 const express = require("express");
 const multer = require("multer");
-const { google } = require("@googleapis/drive");
+const { drive } = require("@googleapis/drive"); // Chỉ lấy drive
+const { GoogleAuth } = require("google-auth-library"); // Lấy GoogleAuth từ google-auth-library
 const fs = require("fs");
 const path = require("path");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Khởi tạo Google Drive API với Service Account
-const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(__dirname, "./mydriveapi-452814-f836bbf65aeb.json"), // Đường dẫn tới file JSON Service Account
+const auth = new GoogleAuth({
+  keyFile: path.join(__dirname, "mydriveapi-452814-f836bbf65aeb.json"), // Đúng với file của bạn
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
-const drive = google.drive({ version: "v3", auth });
+const driveClient = drive({ version: "v3", auth });
 
 // ID thư mục trên Google Drive
-const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe"; // Thay bằng Folder ID của bạn
+const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 
 // Tải dữ liệu từ Google Drive
 async function loadPosts() {
   try {
-    const res = await drive.files.list({
+    const res = await driveClient.files.list({
       q: `'${FOLDER_ID}' in parents posts.json`,
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
     if (file) {
-      const fileData = await drive.files.get(
+      const fileData = await driveClient.files.get(
         { fileId: file.id, alt: "media" },
         { responseType: "stream" }
       );
@@ -33,7 +34,10 @@ async function loadPosts() {
       return new Promise((resolve) => {
         fileData.data
           .on("data", (chunk) => (data += chunk))
-          .on("end", () => resolve(JSON.parse(data)))
+          .on("end", () => {
+            console.log("Loaded posts from Drive:", data);
+            resolve(JSON.parse(data));
+          })
           .on("error", (err) => {
             console.error("Error reading posts from Drive:", err.message);
             resolve([]);
@@ -53,15 +57,14 @@ async function loadPosts() {
 async function savePosts(posts) {
   try {
     const fileContent = JSON.stringify(posts, null, 2);
-    const res = await drive.files.list({
+    const res = await driveClient.files.list({
       q: `'${FOLDER_ID}' in parents posts.json`,
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
 
     if (file) {
-      // Cập nhật file hiện có
-      await drive.files.update({
+      await driveClient.files.update({
         fileId: file.id,
         media: {
           mimeType: "application/json",
@@ -70,8 +73,7 @@ async function savePosts(posts) {
       });
       console.log("Updated posts.json on Drive");
     } else {
-      // Tạo file mới
-      await drive.files.create({
+      await driveClient.files.create({
         resource: {
           name: "posts.json",
           parents: [FOLDER_ID],
@@ -94,10 +96,10 @@ loadPosts().then((loadedPosts) => {
   posts = loadedPosts;
 });
 
+// Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -106,7 +108,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Xử lý yêu cầu OPTIONS (preflight)
 app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
