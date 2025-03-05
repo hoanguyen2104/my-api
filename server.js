@@ -6,7 +6,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Kết nối MongoDB Atlas
 mongoose
-  .connect("mongodb+srv://posts:myPass21042009@cluster0.vbe1d.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
+  .connect("mongodb+srv://admin:myPass21042009@cluster0.vbe1d.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
