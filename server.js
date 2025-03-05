@@ -7,7 +7,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Khởi tạo Google Drive API với Service Account từ biến môi trường
 const auth = new GoogleAuth({
-  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS), // Lấy từ biến môi trường
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 const driveClient = drive({ version: "v3", auth });
@@ -19,7 +19,7 @@ const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
 async function loadPosts() {
   try {
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents posts.json`,
+      q: `'${FOLDER_ID}' in parents name:posts.json`, // Sửa cú pháp tìm kiếm
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
@@ -56,7 +56,7 @@ async function savePosts(posts) {
   try {
     const fileContent = JSON.stringify(posts, null, 2);
     const res = await driveClient.files.list({
-      q: `'${FOLDER_ID}' in parents posts.json`,
+      q: `'${FOLDER_ID}' in parents name:posts.json`, // Sửa cú pháp tìm kiếm
       fields: "files(id, name)",
     });
     const file = res.data.files.find((f) => f.name === "posts.json");
@@ -69,7 +69,7 @@ async function savePosts(posts) {
           body: fileContent,
         },
       });
-      console.log("Updated posts.json on Drive");
+      console.log("Updated posts.json on Drive, file ID:", file.id);
     } else {
       await driveClient.files.create({
         resource: {
@@ -85,7 +85,6 @@ async function savePosts(posts) {
     }
   } catch (error) {
     console.error("Error saving posts to Drive:", error.message);
-    throw error; // Để frontend nhận lỗi nếu cần
   }
 }
 
