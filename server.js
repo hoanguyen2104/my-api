@@ -1,15 +1,13 @@
 const express = require("express");
 const multer = require("multer");
-const { drive } = require("@googleapis/drive"); // Chỉ lấy drive
-const { GoogleAuth } = require("google-auth-library"); // Lấy GoogleAuth từ google-auth-library
-const fs = require("fs");
-const path = require("path");
+const { drive } = require("@googleapis/drive");
+const { GoogleAuth } = require("google-auth-library");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Khởi tạo Google Drive API với Service Account
+// Khởi tạo Google Drive API với Service Account từ biến môi trường
 const auth = new GoogleAuth({
-  keyFile: path.join(__dirname, "mydriveapi-452814-f836bbf65aeb.json"), // Đúng với file của bạn
+  credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS), // Lấy từ biến môi trường
   scopes: ["https://www.googleapis.com/auth/drive"],
 });
 const driveClient = drive({ version: "v3", auth });
@@ -87,6 +85,7 @@ async function savePosts(posts) {
     }
   } catch (error) {
     console.error("Error saving posts to Drive:", error.message);
+    throw error; // Để frontend nhận lỗi nếu cần
   }
 }
 
@@ -94,12 +93,13 @@ async function savePosts(posts) {
 let posts = [];
 loadPosts().then((loadedPosts) => {
   posts = loadedPosts;
+  console.log("Initial posts loaded:", posts.length);
 });
 
-// Middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -108,6 +108,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Xử lý yêu cầu OPTIONS (preflight)
 app.options("*", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
