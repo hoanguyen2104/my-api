@@ -1,35 +1,98 @@
 const express = require("express");
 const multer = require("multer");
-const fs = require("fs"); // Module để đọc/ghi file
+const { google } = require("@googleapis/drive");
+const fs = require("fs");
+const path = require("path");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Đường dẫn tới file JSON
-const DATA_FILE = "posts.json";
+// Khởi tạo Google Drive API với Service Account
+const auth = new google.auth.GoogleAuth({
+  keyFile: path.join(__dirname, "myposts.json"), // Đường dẫn tới file JSON Service Account
+  scopes: ["https://www.googleapis.com/auth/drive"],
+});
+const drive = google.drive({ version: "v3", auth });
 
-// Khởi tạo danh sách bài viết từ file JSON, nếu không tồn tại thì dùng mảng rỗng
-let posts = [];
-if (fs.existsSync(DATA_FILE)) {
+// ID thư mục trên Google Drive
+const FOLDER_ID = "1TnL94q6t80PrxgjxGoQvJVnl2F-oGNGe";
+
+// Tải dữ liệu từ Google Drive
+async function loadPosts() {
   try {
-    const fileData = fs.readFileSync(DATA_FILE, "utf8");
-    posts = JSON.parse(fileData);
+    const res = await drive.files.list({
+      q: `'${FOLDER_ID}' in parents posts.json`,
+      fields: "files(id, name)",
+    });
+    const file = res.data.files.find((f) => f.name === "posts.json");
+    if (file) {
+      const fileData = await drive.files.get(
+        { fileId: file.id, alt: "media" },
+        { responseType: "stream" }
+      );
+      let data = "";
+      return new Promise((resolve) => {
+        fileData.data
+          .on("data", (chunk) => (data += chunk))
+          .on("end", () => resolve(JSON.parse(data)))
+          .on("error", (err) => {
+            console.error("Error reading posts from Drive:", err.message);
+            resolve([]);
+          });
+      });
+    } else {
+      console.log("posts.json not found on Drive, starting with empty array");
+      return [];
+    }
   } catch (error) {
-    console.error("Error reading posts.json:", error.message);
-    posts = [];
+    console.error("Error loading posts from Drive:", error.message);
+    return [];
   }
-} else {
-  console.log("posts.json not found, starting with empty array");
 }
 
-// Hàm lưu dữ liệu vào file JSON
-const savePosts = () => {
+// Lưu dữ liệu lên Google Drive
+async function savePosts(posts) {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(posts, null, 2));
-    console.log("Posts saved to posts.json");
+    const fileContent = JSON.stringify(posts, null, 2);
+    const res = await drive.files.list({
+      q: `'${FOLDER_ID}' in parents posts.json`,
+      fields: "files(id, name)",
+    });
+    const file = res.data.files.find((f) => f.name === "posts.json");
+
+    if (file) {
+      // Cập nhật file hiện có
+      await drive.files.update({
+        fileId: file.id,
+        media: {
+          mimeType: "application/json",
+          body: fileContent,
+        },
+      });
+      console.log("Updated posts.json on Drive");
+    } else {
+      // Tạo file mới
+      await drive.files.create({
+        resource: {
+          name: "posts.json",
+          parents: [FOLDER_ID],
+        },
+        media: {
+          mimeType: "application/json",
+          body: fileContent,
+        },
+      });
+      console.log("Created posts.json on Drive");
+    }
   } catch (error) {
-    console.error("Error saving posts to posts.json:", error.message);
+    console.error("Error saving posts to Drive:", error.message);
   }
-};
+}
+
+// Khởi tạo danh sách bài viết
+let posts = [];
+loadPosts().then((loadedPosts) => {
+  posts = loadedPosts;
+});
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -63,7 +126,7 @@ app.get("/posts", (req, res) => {
 });
 
 // Tạo bài viết mới
-app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), (req, res) => {
+app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), async (req, res) => {
   try {
     console.log("POST /posts - Request body:", req.body);
     console.log("POST /posts - Request files:", req.files);
@@ -82,7 +145,7 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), (req,
     };
 
     posts.push(newPost);
-    savePosts();
+    await savePosts(posts);
     console.log("Created post:", newPost);
     res.status(201).json(newPost);
   } catch (error) {
@@ -92,14 +155,14 @@ app.post("/posts", upload.fields([{ name: "avatar" }, { name: "image" }]), (req,
 });
 
 // Cập nhật bài viết
-app.patch("/posts/:id", (req, res) => {
+app.patch("/posts/:id", async (req, res) => {
   try {
     console.log(`PATCH /posts/${req.params.id} - Request body:`, req.body);
     const { id } = req.params;
     const post = posts.find((p) => p.id === id);
     if (post) {
       Object.assign(post, req.body);
-      savePosts();
+      await savePosts(posts);
       console.log("Updated post:", post);
       res.json(post);
     } else {
@@ -112,13 +175,13 @@ app.patch("/posts/:id", (req, res) => {
 });
 
 // Xóa bài viết
-app.delete("/posts/:id", (req, res) => {
+app.delete("/posts/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const postIndex = posts.findIndex((p) => p.id === id);
     if (postIndex !== -1) {
       posts.splice(postIndex, 1);
-      savePosts();
+      await savePosts(posts);
       console.log(`Deleted post with id: ${id}`);
       res.status(204).send();
     } else {
