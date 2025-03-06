@@ -202,6 +202,7 @@ app.post("/posts", upload.single("image"), async (req, res) => {
   try {
     const newPost = {
       id: Date.now().toString(),
+      username: req.body.username || "", // Thêm username của người tạo
       name: req.body.name,
       content: req.body.content || "",
       likes: parseInt(req.body.likes) || 0,

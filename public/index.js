@@ -40,11 +40,6 @@ const App = {
     return `${hours}:${minutes} ${month}/${day}/${year}`;
   },
 
-  getMyPosts: function () {
-    const data = localStorage.getItem("myPosts");
-    return data ? JSON.parse(data) : [];
-  },
-
   getLikedPosts: function () {
     const data = localStorage.getItem("likedPosts");
     return data ? JSON.parse(data) : [];
@@ -70,7 +65,6 @@ const App = {
   logout: function () {
     App.currentUser = null;
     localStorage.removeItem("currentUser");
-    localStorage.removeItem("myPosts");
     localStorage.removeItem("likedPosts");
     document.getElementById("logout-menu").classList.add("hidden");
     App.updateUserProfile();
@@ -91,7 +85,7 @@ const App = {
     const likedPosts = App.getLikedPosts();
     if (postsData && postsData.length > 0) {
       postsData.forEach((e) => {
-        const isMyPost = App.currentUser && App.getMyPosts().includes(e.codePass);
+        const isMyPost = App.currentUser && e.username === App.currentUser.username; // Kiểm tra username
         const isLiked = likedPosts.includes(e.id);
         postsList.innerHTML += `
           <div class="content__wrapper">
@@ -222,8 +216,6 @@ const App = {
           if (res.ok) {
             const postElement = document.getElementById(`post-${postId}`);
             postElement.parentElement.remove();
-            const myPosts = App.getMyPosts().filter((code) => code !== postId);
-            localStorage.setItem("myPosts", JSON.stringify(myPosts));
           } else {
             throw new Error("Không thể xóa bài viết!");
           }
@@ -301,14 +293,10 @@ const App = {
         ) {
           e.target.classList.add("btn--disable");
           e.target.innerText = "Đang đăng";
-          const myPosts = App.getMyPosts();
-          const codePass = Math.random().toString();
-          myPosts.push(codePass);
-
           const formData = new FormData();
+          formData.append("username", App.currentUser.username); // Thêm username
           formData.append("name", App.currentUser.displayName);
           formData.append("content", document.querySelector(".createPost__content-write").value);
-          formData.append("codePass", codePass);
           formData.append("time", App.getTime());
           if (imageFile) formData.append("image", imageFile);
 
@@ -318,7 +306,6 @@ const App = {
           })
             .then((res) => {
               if (res.ok) {
-                localStorage.setItem("myPosts", JSON.stringify(myPosts));
                 return res.json();
               } else {
                 throw new Error("Không thể tạo bài viết!");
