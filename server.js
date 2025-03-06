@@ -108,6 +108,11 @@ app.options("*", (req, res) => {
   res.sendStatus(200);
 });
 
+// Phục vụ index.html ở gốc "/"
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 // Trang đăng nhập
 app.get("/login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
