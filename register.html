@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng ký - HoangN</title>
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    .register-container {
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .register-container h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .register-container input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .register-container button {
+      width: 100%;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .register-container p {
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="register-container">
+    <h1>Đăng ký</h1>
+    <input type="text" id="registerUsername" placeholder="Tên đăng nhập" />
+    <input type="text" id="registerDisplayName" placeholder="Tên hiển thị" />
+    <input type="password" id="registerPassword" placeholder="Mật khẩu" />
+    <input type="file" id="registerAvatar" accept="image/*" />
+    <button onclick="handleRegister()">Đăng ký</button>
+    <p>Đã có tài khoản? <a href="/login">Đăng nhập</a></p>
+  </div>
+  <script>
+    function handleRegister() {
+      const username = document.getElementById("registerUsername").value;
+      const displayName = document.getElementById("registerDisplayName").value;
+      const password = document.getElementById("registerPassword").value;
+      const avatarFile = document.getElementById("registerAvatar").files[0];
+
+      const formData = new FormData();
+      formData.append("username", username);
+      formData.append("displayName", displayName);
+      formData.append("password", password);
+      if (avatarFile) formData.append("avatar", avatarFile);
+
+      fetch("/api/register", {
+        method: "POST",
+        body: formData,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          alert(data.message);
+          if (res.status === 201) window.location.href = "/login";
+        })
+        .catch((error) => alert("Lỗi khi đăng ký: " + error));
+    }
+  </script>
+</body>
+</html>
