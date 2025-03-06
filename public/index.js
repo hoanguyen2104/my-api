@@ -2,7 +2,6 @@ const modal = document.querySelector(".modal");
 const modalBody = document.querySelector(".modal__body");
 const overlay = document.querySelector(".overlay");
 const content = document.querySelector(".content");
-const createPost = document.querySelector(".createNewPost");
 const authButtons = document.getElementById("auth-buttons");
 const userInfo = document.getElementById("user-info");
 const userAvatar = document.getElementById("user-avatar");
@@ -56,17 +55,9 @@ const App = {
       userInfo.classList.remove("hidden");
       userAvatar.src = App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40";
       userDisplayName.textContent = App.currentUser.displayName;
-      createPost.innerHTML = `
-        <img src="${App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40"}" alt="Avatar" class="header__user-avatar" />
-        <span>${App.currentUser.displayName}</span>
-      `;
     } else {
       authButtons.classList.remove("hidden");
       userInfo.classList.add("hidden");
-      createPost.innerHTML = `
-        <span>Tạo bài viết mới</span>
-        <i class="header__item-icon fa-solid fa-plus"></i>
-      `;
     }
   },
 
@@ -344,7 +335,6 @@ const App = {
   start: function () {
     this.updateUserProfile();
     this.renderPost();
-    createPost.onclick = () => this.handleCreatePost();
     overlay.onclick = () => this.closeModal();
   },
 };
