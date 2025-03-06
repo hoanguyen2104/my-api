@@ -3,6 +3,10 @@ const modalBody = document.querySelector(".modal__body");
 const overlay = document.querySelector(".overlay");
 const content = document.querySelector(".content");
 const createPost = document.querySelector(".createNewPost");
+const authButtons = document.getElementById("auth-buttons");
+const userInfo = document.getElementById("user-info");
+const userAvatar = document.getElementById("user-avatar");
+const userDisplayName = document.getElementById("user-display-name");
 
 const App = {
   isCreating: false,
@@ -49,6 +53,28 @@ const App = {
   closeModal: function () {
     modal.classList.add("hidden");
     modalBody.innerHTML = "";
+  },
+
+  updateUserProfile: function () {
+    if (App.currentUser) {
+      authButtons.classList.add("hidden");
+      userInfo.classList.remove("hidden");
+      userAvatar.src = App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40";
+      userDisplayName.textContent = App.currentUser.displayName;
+    } else {
+      authButtons.classList.remove("hidden");
+      userInfo.classList.add("hidden");
+    }
+  },
+
+  logout: function () {
+    App.currentUser = null;
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("myPosts");
+    localStorage.removeItem("likedPosts");
+    document.getElementById("logout-menu").classList.add("hidden");
+    App.updateUserProfile();
+    App.renderPost();
   },
 
   renderPost: async function () {
@@ -322,6 +348,7 @@ const App = {
   },
 
   start: function () {
+    this.updateUserProfile();
     this.renderPost();
     createPost.onclick = () => this.handleCreatePost();
     overlay.onclick = () => this.closeModal();
