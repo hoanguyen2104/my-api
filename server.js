@@ -123,6 +123,11 @@ app.get("/register", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "register.html"));
 });
 
+// Trang admin
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
+});
+
 app.post("/api/register", upload.single("avatar"), async (req, res) => {
   try {
     const { username, password, displayName } = req.body;

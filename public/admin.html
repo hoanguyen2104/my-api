@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - HoangN</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" />
+  <style>
+    .admin-container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .admin-container h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .admin-login {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+    .admin-login input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .admin-login button {
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .admin-posts {
+      display: none;
+    }
+    .post-item {
+      border-bottom: 1px solid #ddd;
+      padding: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .post-item button {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <h1>Quản lý bài viết</h1>
+    <div class="admin-login" id="adminLogin">
+      <input type="password" id="adminPassword" placeholder="Nhập mật khẩu admin" />
+      <button onclick="loginAdmin()">Đăng nhập</button>
+    </div>
+    <div class="admin-posts" id="adminPosts">
+      <h2>Danh sách bài viết</h2>
+      <div id="postList"></div>
+    </div>
+  </div>
+  <script>
+    const apiUrl = "https://my-api-vao1.onrender.com";
+
+    function loginAdmin() {
+      const password = document.getElementById("adminPassword").value;
+      fetch(`${apiUrl}/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            localStorage.setItem("isAdmin", "true");
+            document.getElementById("adminLogin").style.display = "none";
+            document.getElementById("adminPosts").style.display = "block";
+            loadPosts();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch((error) => alert("Lỗi khi đăng nhập admin: " + error));
+    }
+
+    function loadPosts() {
+      fetch(`${apiUrl}/posts?page=1&limit=1000`) // Lấy tất cả bài viết
+        .then((res) => res.json())
+        .then((data) => {
+          const postList = document.getElementById("postList");
+          postList.innerHTML = "";
+          data.posts.forEach((post) => {
+            const postItem = document.createElement("div");
+            postItem.classList.add("post-item");
+            postItem.innerHTML = `
+              <span>${post.name}: ${post.content.substring(0, 50)}...</span>
+              <button onclick="deletePost('${post.id}')"><i class="fa-solid fa-trash"></i> Xóa</button>
+            `;
+            postList.appendChild(postItem);
+          });
+        })
+        .catch((error) => alert("Lỗi khi tải bài viết: " + error));
+    }
+
+    function deletePost(postId) {
+      if (confirm("Bạn có chắc muốn xóa bài viết này?")) {
+        fetch(`${apiUrl}/posts/${postId}`, { method: "DELETE" })
+          .then((res) => {
+            if (res.ok) {
+              loadPosts(); // Tải lại danh sách
+            } else {
+              throw new Error("Không thể xóa bài viết!");
+            }
+          })
+          .catch((error) => alert("Lỗi khi xóa: " + error));
+      }
+    }
+
+    // Kiểm tra trạng thái admin khi tải trang
+    if (localStorage.getItem("isAdmin") === "true") {
+      document.getElementById("adminLogin").style.display = "none";
+      document.getElementById("adminPosts").style.display = "block";
+      loadPosts();
+    }
+  </script>
+</body>
+</html>
