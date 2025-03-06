@@ -56,9 +56,17 @@ const App = {
       userInfo.classList.remove("hidden");
       userAvatar.src = App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40";
       userDisplayName.textContent = App.currentUser.displayName;
+      createPost.innerHTML = `
+        <img src="${App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40"}" alt="Avatar" class="header__user-avatar" />
+        <span>${App.currentUser.displayName}</span>
+      `;
     } else {
       authButtons.classList.remove("hidden");
       userInfo.classList.add("hidden");
+      createPost.innerHTML = `
+        <span>Tạo bài viết mới</span>
+        <i class="header__item-icon fa-solid fa-plus"></i>
+      `;
     }
   },
 
@@ -85,15 +93,14 @@ const App = {
     const likedPosts = App.getLikedPosts();
     if (postsData && postsData.length > 0) {
       postsData.forEach((e) => {
-        const isMyPost = App.currentUser && e.username === App.currentUser.username; // Kiểm tra username
+        const isMyPost = App.currentUser && e.username === App.currentUser.username;
         const isLiked = likedPosts.includes(e.id);
+        const postAvatar = isMyPost && App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/50";
         postsList.innerHTML += `
           <div class="content__wrapper">
             <div class="post" id="post-${e.id}">
               <div class="post__header">
-                <div class="post__avatar" style="background-image: url('${
-                  e.avatar ? `data:image/jpeg;base64,${e.avatar}` : "https://via.placeholder.com/50"
-                }');"></div>
+                <div class="post__avatar" style="background-image: url('${postAvatar}');"></div>
                 <div class="post__info">
                   <h3 class="post__user-name">${e.name}</h3>
                   <div class="post__info-time">${e.time}</div>
@@ -294,7 +301,7 @@ const App = {
           e.target.classList.add("btn--disable");
           e.target.innerText = "Đang đăng";
           const formData = new FormData();
-          formData.append("username", App.currentUser.username); // Thêm username
+          formData.append("username", App.currentUser.username);
           formData.append("name", App.currentUser.displayName);
           formData.append("content", document.querySelector(".createPost__content-write").value);
           formData.append("time", App.getTime());

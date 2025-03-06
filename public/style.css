@@ -663,3 +663,16 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+.header__user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.header__item.createNewPost {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
