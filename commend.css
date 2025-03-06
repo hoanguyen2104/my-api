@@ -1,0 +1,82 @@
+.commentModal {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 100%;
+    position: relative;
+  }
+  
+  .commentModal__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+  }
+  
+  .commentModal__header {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .commentModal__body {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  
+  .commentModal__list {
+    list-style: none;
+    padding: 0;
+    margin-bottom: 20px;
+  }
+  
+  .commentModal__item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    font-size: 18px; /* Font chữ lớn hơn */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .commentModal__content {
+    flex: 1;
+  }
+  
+  .commentModal__delete {
+    padding: 5px 10px;
+    font-size: 14px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .commentModal__input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .commentModal__input-wrapper input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+  }
+  
+  .commentModal__submit {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Hiệu ứng chuyển màu */
+  }
+  
+  .commentModal__submit:hover {
+    background-color: #0056b3; /* Hiệu ứng hover */
+  }

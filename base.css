@@ -1,0 +1,83 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html {
+    font-size: 62.5%;
+    font-family: sans-serif;
+  }
+  body {
+    font-size: 1.4rem;
+  }
+  body::-webkit-scrollbar {
+    width: 10px;
+  }
+  body::-webkit-scrollbar-track {
+    background-color: #18191a;
+  }
+  body::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50px;
+  }
+  ul {
+    list-style: none;
+  }
+  a[href] {
+    color: var(--white-color);
+    text-decoration: none;
+  }
+  iframe {
+    display: none;
+  }
+  :root {
+    --white-color: #fff;
+    --text-color: ;
+    --header-height: 46px;
+  }
+  .hidden {
+    display: none !important;
+  }
+  .btn {
+    min-width: 124px;
+    height: 34px;
+    border: none;
+    text-decoration: none;
+    border-radius: 2px;
+    border: 1px solid #f0f0f0;
+    font-size: 1.4rem;
+    background-color: #fff;
+    padding: 0 8px;
+    cursor: pointer;
+    outline: none;
+    color: var(--text-color);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.6rem;
+  }
+  .btn.btn--disable {
+    cursor: default;
+    opacity: 0.5 !important;
+  }
+  .overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  .modal__body {
+    z-index: 2;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    border-radius: 5px;
+    transform: translateY(-50%) translateX(-50%);
+    width: 500px;
+    min-height: 100px;
+    background-color: #242526;
+    max-width: 80%;
+  }
+  
