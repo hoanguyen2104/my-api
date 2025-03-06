@@ -174,6 +174,21 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.get("/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const user = users.find((u) => u.username === username);
+    if (user) {
+      res.json({ username: user.username, displayName: user.displayName, avatar: user.avatar });
+    } else {
+      res.status(404).json({ message: "Không tìm thấy người dùng" });
+    }
+  } catch (error) {
+    console.error("Error fetching user:", error.message);
+    res.status(500).json({ message: "Lỗi server khi lấy thông tin người dùng" });
+  }
+});
+
 app.get("/posts", (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -181,7 +196,13 @@ app.get("/posts", (req, res) => {
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
 
-    const paginatedPosts = posts.slice(startIndex, endIndex);
+    const paginatedPosts = posts.slice(startIndex, endIndex).map(post => {
+      const user = users.find(u => u.username === post.username);
+      return {
+        ...post,
+        avatar: user ? user.avatar : null // Thêm avatar từ users
+      };
+    });
     const totalPosts = posts.length;
     const totalPages = Math.ceil(totalPosts / limit);
 

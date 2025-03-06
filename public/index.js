@@ -86,7 +86,7 @@ const App = {
       postsData.forEach((e) => {
         const isMyPost = App.currentUser && e.username === App.currentUser.username;
         const isLiked = likedPosts.includes(e.id);
-        const postAvatar = isMyPost && App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/50";
+        const postAvatar = e.avatar ? `data:image/jpeg;base64,${e.avatar}` : "https://via.placeholder.com/50";
         postsList.innerHTML += `
           <div class="content__wrapper">
             <div class="post" id="post-${e.id}">

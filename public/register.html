@@ -42,14 +42,21 @@
       font-size: 0.9em;
       color: #666;
     }
+    .note {
+      font-size: 0.8em;
+      color: #888;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="register-container">
     <h1>Đăng ký</h1>
     <input type="text" id="registerUsername" placeholder="Tên đăng nhập *" required />
+    <p class="note">Tên đăng nhập: 3-16 ký tự, chỉ chứa chữ cái (a-z, A-Z), số (0-9), dấu gạch dưới (_), và dấu chấm (.).</p>
     <input type="text" id="registerDisplayName" placeholder="Tên hiển thị *" required />
     <input type="password" id="registerPassword" placeholder="Mật khẩu *" required />
+    <input type="password" id="registerConfirmPassword" placeholder="Xác nhận mật khẩu *" required />
     <label for="registerAvatar">Chọn ảnh đại diện (định dạng .jpg, .png, .gif, tối đa 5MB):</label>
     <input type="file" id="registerAvatar" accept="image/*" required />
     <button onclick="handleRegister()">Đăng ký</button>
@@ -60,10 +67,25 @@
       const username = document.getElementById("registerUsername").value;
       const displayName = document.getElementById("registerDisplayName").value;
       const password = document.getElementById("registerPassword").value;
+      const confirmPassword = document.getElementById("registerConfirmPassword").value;
       const avatarFile = document.getElementById("registerAvatar").files[0];
 
-      if (!username || !displayName || !password || !avatarFile) {
+      // Kiểm tra đầy đủ thông tin
+      if (!username || !displayName || !password || !confirmPassword || !avatarFile) {
         alert("Vui lòng điền đầy đủ thông tin!");
+        return;
+      }
+
+      // Kiểm tra quy tắc tên đăng nhập
+      const usernameRegex = /^[a-zA-Z0-9_.]{3,16}$/;
+      if (!usernameRegex.test(username)) {
+        alert("Tên đăng nhập không hợp lệ! Chỉ dùng chữ cái, số, dấu gạch dưới, dấu chấm, độ dài 3-16 ký tự.");
+        return;
+      }
+
+      // Kiểm tra mật khẩu khớp
+      if (password !== confirmPassword) {
+        alert("Mật khẩu và xác nhận mật khẩu không khớp!");
         return;
       }
 
@@ -83,7 +105,7 @@
             alert("Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.");
             setTimeout(() => {
               window.location.href = "/login";
-            }, 1000); // Chuyển sau 1 giây
+            }, 1000);
           } else {
             alert(data.message);
           }
