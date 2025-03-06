@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { drive } = require("@googleapis/drive");
 const { GoogleAuth } = require("google-auth-library");
+const path = require("path");
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -31,17 +32,8 @@ async function loadFromDrive(filename) {
           .on("data", (chunk) => (data += chunk))
           .on("end", () => {
             console.log(`Loaded ${filename} from Drive:`, data);
-            if (!data || data.trim() === "") {
-              console.log(`${filename} is empty, returning empty array`);
-              resolve([]);
-            } else {
-              try {
-                resolve(JSON.parse(data));
-              } catch (parseError) {
-                console.error(`Error parsing ${filename}:`, parseError.message);
-                resolve([]);
-              }
-            }
+            if (!data || data.trim() === "") resolve([]);
+            else resolve(JSON.parse(data));
           })
           .on("error", (err) => {
             console.error(`Error reading ${filename} from Drive:`, err.message);
@@ -70,22 +62,13 @@ async function saveToDrive(filename, data) {
     if (file) {
       await driveClient.files.update({
         fileId: file.id,
-        media: {
-          mimeType: "application/json",
-          body: fileContent,
-        },
+        media: { mimeType: "application/json", body: fileContent },
       });
       console.log(`Updated ${filename} on Drive, file ID:`, file.id);
     } else {
       const newFile = await driveClient.files.create({
-        resource: {
-          name: filename,
-          parents: [FOLDER_ID],
-        },
-        media: {
-          mimeType: "application/json",
-          body: fileContent,
-        },
+        resource: { name: filename, parents: [FOLDER_ID] },
+        media: { mimeType: "application/json", body: fileContent },
       });
       console.log(`Created ${filename} on Drive, file ID:`, newFile.data.id);
     }
@@ -108,6 +91,7 @@ Promise.all([loadFromDrive("posts.json"), loadFromDrive("users.json")]).then(
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public")); // Phục vụ file tĩnh từ thư mục public
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -124,7 +108,17 @@ app.options("*", (req, res) => {
   res.sendStatus(200);
 });
 
-app.post("/register", upload.single("avatar"), async (req, res) => {
+// Trang đăng nhập
+app.get("/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+
+// Trang đăng ký
+app.get("/register", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "register.html"));
+});
+
+app.post("/api/register", upload.single("avatar"), async (req, res) => {
   try {
     const { username, password, displayName } = req.body;
     if (!username || !password || !displayName) {
@@ -150,7 +144,7 @@ app.post("/register", upload.single("avatar"), async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) {
@@ -196,9 +190,6 @@ app.get("/posts", (req, res) => {
 
 app.post("/posts", upload.single("image"), async (req, res) => {
   try {
-    console.log("POST /posts - Request body:", req.body);
-    console.log("POST /posts - Request files:", req.files);
-
     const newPost = {
       id: Date.now().toString(),
       name: req.body.name,
@@ -242,10 +233,10 @@ app.patch("/posts/:id/like", async (req, res) => {
 app.post("/posts/:id/comment", async (req, res) => {
   try {
     const { id } = req.params;
-    const { text } = req.body;
+    const { text, name } = req.body;
     const post = posts.find((p) => p.id === id);
     if (post) {
-      const newComment = { name: req.body.name, text, codePass: Math.random().toString() };
+      const newComment = { name, text, codePass: Math.random().toString() };
       post.commentsList.push(newComment);
       post.comments += 1;
       await saveToDrive("posts.json", posts);
@@ -262,7 +253,6 @@ app.post("/posts/:id/comment", async (req, res) => {
 
 app.patch("/posts/:id", async (req, res) => {
   try {
-    console.log(`PATCH /posts/${req.params.id} - Request body:`, req.body);
     const { id } = req.params;
     const post = posts.find((p) => p.id === id);
     if (post) {
