@@ -334,7 +334,37 @@ app.post("/admin/login", (req, res) => {
   }
 });
 
+// API lấy danh sách tài khoản
+app.get("/admin/users", (req, res) => {
+  try {
+    res.json(users.map(u => ({ username: u.username, displayName: u.displayName, password: u.password })));
+  } catch (error) {
+    console.error("Error fetching users:", error.message);
+    res.status(500).json({ message: "Lỗi server khi lấy danh sách tài khoản" });
+  }
+});
+
+// API xóa tài khoản
+app.delete("/admin/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const userIndex = users.findIndex(u => u.username === username);
+    if (userIndex !== -1) {
+      users.splice(userIndex, 1);
+      await saveToDrive("users.json", users);
+      console.log(`Deleted user: ${username}`);
+      res.status(204).send();
+    } else {
+      res.status(404).json({ message: "Không tìm thấy tài khoản" });
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error.message);
+    res.status(500).json({ message: "Lỗi server khi xóa tài khoản" });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server đang chạy tại cổng ${PORT}`);
 });
+

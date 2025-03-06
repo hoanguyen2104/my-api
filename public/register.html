@@ -25,6 +25,9 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+    .register-container input.error {
+      border-color: red;
+    }
     .register-container button {
       width: 100%;
       padding: 10px;
@@ -63,7 +66,12 @@
     <p>Đã có tài khoản? <a href="/login">Đăng nhập</a></p>
   </div>
   <script>
+    function clearErrors() {
+      document.querySelectorAll("input").forEach(input => input.classList.remove("error"));
+    }
+
     function handleRegister() {
+      clearErrors();
       const username = document.getElementById("registerUsername").value;
       const displayName = document.getElementById("registerDisplayName").value;
       const password = document.getElementById("registerPassword").value;
@@ -72,6 +80,11 @@
 
       // Kiểm tra đầy đủ thông tin
       if (!username || !displayName || !password || !confirmPassword || !avatarFile) {
+        if (!username) document.getElementById("registerUsername").classList.add("error");
+        if (!displayName) document.getElementById("registerDisplayName").classList.add("error");
+        if (!password) document.getElementById("registerPassword").classList.add("error");
+        if (!confirmPassword) document.getElementById("registerConfirmPassword").classList.add("error");
+        if (!avatarFile) document.getElementById("registerAvatar").classList.add("error");
         alert("Vui lòng điền đầy đủ thông tin!");
         return;
       }
@@ -79,12 +92,16 @@
       // Kiểm tra quy tắc tên đăng nhập
       const usernameRegex = /^[a-zA-Z0-9_.]{3,16}$/;
       if (!usernameRegex.test(username)) {
+        document.getElementById("registerUsername").classList.add("error");
+        document.getElementById("registerUsername").focus();
         alert("Tên đăng nhập không hợp lệ! Chỉ dùng chữ cái, số, dấu gạch dưới, dấu chấm, độ dài 3-16 ký tự.");
         return;
       }
 
       // Kiểm tra mật khẩu khớp
       if (password !== confirmPassword) {
+        document.getElementById("registerConfirmPassword").classList.add("error");
+        document.getElementById("registerConfirmPassword").focus();
         alert("Mật khẩu và xác nhận mật khẩu không khớp!");
         return;
       }
@@ -107,6 +124,10 @@
               window.location.href = "/login";
             }, 1000);
           } else {
+            if (data.message === "Username đã tồn tại") {
+              document.getElementById("registerUsername").classList.add("error");
+              document.getElementById("registerUsername").focus();
+            }
             alert(data.message);
           }
         })

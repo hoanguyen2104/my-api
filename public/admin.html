@@ -39,17 +39,38 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    .admin-posts {
+    .admin-content {
       display: none;
     }
-    .post-item {
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      padding: 10px;
+      background-color: #f0f0f0;
+      border: none;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background-color: #007bff;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .item {
       border-bottom: 1px solid #ddd;
       padding: 10px 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .post-item button {
+    .item button {
       background-color: #dc3545;
       color: white;
       border: none;
@@ -61,14 +82,24 @@
 </head>
 <body>
   <div class="admin-container">
-    <h1>Quản lý bài viết</h1>
+    <h1>Quản lý</h1>
     <div class="admin-login" id="adminLogin">
       <input type="password" id="adminPassword" placeholder="Nhập mật khẩu admin" />
       <button onclick="loginAdmin()">Đăng nhập</button>
     </div>
-    <div class="admin-posts" id="adminPosts">
-      <h2>Danh sách bài viết</h2>
-      <div id="postList"></div>
+    <div class="admin-content" id="adminContent">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('posts')">Bài viết</button>
+        <button class="tab-btn" onclick="showTab('users')">Tài khoản</button>
+      </div>
+      <div id="postsTab" class="tab-content active">
+        <h2>Danh sách bài viết</h2>
+        <div id="postList"></div>
+      </div>
+      <div id="usersTab" class="tab-content">
+        <h2>Danh sách tài khoản</h2>
+        <div id="userList"></div>
+      </div>
     </div>
   </div>
   <script>
@@ -86,8 +117,9 @@
           if (data.success) {
             localStorage.setItem("isAdmin", "true");
             document.getElementById("adminLogin").style.display = "none";
-            document.getElementById("adminPosts").style.display = "block";
+            document.getElementById("adminContent").style.display = "block";
             loadPosts();
+            loadUsers();
           } else {
             alert(data.message);
           }
@@ -95,15 +127,22 @@
         .catch((error) => alert("Lỗi khi đăng nhập admin: " + error));
     }
 
+    function showTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+      document.querySelector(`button[onclick="showTab('${tab}')"]`).classList.add("active");
+      document.getElementById(`${tab}Tab`).classList.add("active");
+    }
+
     function loadPosts() {
-      fetch(`${apiUrl}/posts?page=1&limit=1000`) // Lấy tất cả bài viết
+      fetch(`${apiUrl}/posts?page=1&limit=1000`)
         .then((res) => res.json())
         .then((data) => {
           const postList = document.getElementById("postList");
           postList.innerHTML = "";
           data.posts.forEach((post) => {
             const postItem = document.createElement("div");
-            postItem.classList.add("post-item");
+            postItem.classList.add("item");
             postItem.innerHTML = `
               <span>${post.name}: ${post.content.substring(0, 50)}...</span>
               <button onclick="deletePost('${post.id}')"><i class="fa-solid fa-trash"></i> Xóa</button>
@@ -114,12 +153,31 @@
         .catch((error) => alert("Lỗi khi tải bài viết: " + error));
     }
 
+    function loadUsers() {
+      fetch(`${apiUrl}/admin/users`)
+        .then((res) => res.json())
+        .then((data) => {
+          const userList = document.getElementById("userList");
+          userList.innerHTML = "";
+          data.forEach((user) => {
+            const userItem = document.createElement("div");
+            userItem.classList.add("item");
+            userItem.innerHTML = `
+              <span>${user.displayName} (${user.username}) - Mật khẩu: ${user.password}</span>
+              <button onclick="deleteUser('${user.username}')"><i class="fa-solid fa-trash"></i> Xóa</button>
+            `;
+            userList.appendChild(userItem);
+          });
+        })
+        .catch((error) => alert("Lỗi khi tải tài khoản: " + error));
+    }
+
     function deletePost(postId) {
       if (confirm("Bạn có chắc muốn xóa bài viết này?")) {
         fetch(`${apiUrl}/posts/${postId}`, { method: "DELETE" })
           .then((res) => {
             if (res.ok) {
-              loadPosts(); // Tải lại danh sách
+              loadPosts();
             } else {
               throw new Error("Không thể xóa bài viết!");
             }
@@ -128,11 +186,25 @@
       }
     }
 
-    // Kiểm tra trạng thái admin khi tải trang
+    function deleteUser(username) {
+      if (confirm("Bạn có chắc muốn xóa tài khoản này?")) {
+        fetch(`${apiUrl}/admin/users/${username}`, { method: "DELETE" })
+          .then((res) => {
+            if (res.ok) {
+              loadUsers();
+            } else {
+              throw new Error("Không thể xóa tài khoản!");
+            }
+          })
+          .catch((error) => alert("Lỗi khi xóa: " + error));
+      }
+    }
+
     if (localStorage.getItem("isAdmin") === "true") {
       document.getElementById("adminLogin").style.display = "none";
-      document.getElementById("adminPosts").style.display = "block";
+      document.getElementById("adminContent").style.display = "block";
       loadPosts();
+      loadUsers();
     }
   </script>
 </body>
