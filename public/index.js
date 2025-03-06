@@ -41,6 +41,11 @@ const App = {
     return data ? JSON.parse(data) : [];
   },
 
+  getLikedPosts: function () {
+    const data = localStorage.getItem("likedPosts");
+    return data ? JSON.parse(data) : [];
+  },
+
   closeModal: function () {
     modal.classList.add("hidden");
     modalBody.innerHTML = "";
@@ -57,9 +62,11 @@ const App = {
 
   renderPostsToDOM: function (postsData) {
     const postsList = content.querySelector(".posts-list");
+    const likedPosts = App.getLikedPosts();
     if (postsData && postsData.length > 0) {
       postsData.forEach((e) => {
         const isMyPost = App.currentUser && App.getMyPosts().includes(e.codePass);
+        const isLiked = likedPosts.includes(e.id);
         postsList.innerHTML += `
           <div class="content__wrapper">
             <div class="post" id="post-${e.id}">
@@ -85,9 +92,9 @@ const App = {
                   <div class="post__analysis-wrapper">${e.comments || 0} Bình luận</div>
                 </div>
                 <div class="post__control">
-                  <button class="post__control-btn post__control-btn--like" onclick="App.likePost('${e.id}')">
+                  <button class="post__control-btn post__control-btn--like ${isLiked ? 'liked' : ''}" onclick="App.likePost('${e.id}')">
                     <i class="fa-solid fa-thumbs-up"></i>
-                    <span>Like</span>
+                    <span>${isLiked ? 'Liked' : 'Like'}</span>
                   </button>
                   <button class="post__control-btn post__control-btn--commend" onclick="App.showCommentModal('${e.id}')">
                     <i class="fa-solid fa-comment"></i>
@@ -116,13 +123,22 @@ const App = {
   },
 
   likePost: function (postId) {
-    fetch(`${App.apiUrl}/posts/${postId}/like`, { method: "PATCH" })
-      .then((res) => res.json())
-      .then((updatedPost) => {
-        const postElement = document.getElementById(`post-${postId}`);
-        postElement.querySelector(".like-quantum").textContent = updatedPost.likes;
-      })
-      .catch((error) => console.error("Lỗi khi thích bài viết:", error));
+    const likedPosts = App.getLikedPosts();
+    const isLiked = likedPosts.includes(postId);
+    if (!isLiked) {
+      fetch(`${App.apiUrl}/posts/${postId}/like`, { method: "PATCH" })
+        .then((res) => res.json())
+        .then((updatedPost) => {
+          const postElement = document.getElementById(`post-${postId}`);
+          postElement.querySelector(".like-quantum").textContent = updatedPost.likes;
+          const likeButton = postElement.querySelector(".post__control-btn--like");
+          likeButton.classList.add("liked");
+          likeButton.querySelector("span").textContent = "Liked";
+          likedPosts.push(postId);
+          localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
+        })
+        .catch((error) => console.error("Lỗi khi thích bài viết:", error));
+    }
   },
 
   showCommentModal: function (postId) {

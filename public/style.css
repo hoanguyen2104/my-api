@@ -223,15 +223,19 @@
   }
   
   .post__control-btn--like {
-    background-color: #28a745;
+    background-color: #28a745; /* Màu xanh lá khi chưa thích */
+  }
+  
+  .post__control-btn--like.liked {
+    background-color: #dc3545; /* Màu đỏ khi đã thích */
   }
   
   .post__control-btn--commend {
-    background-color: #17a2b8;
+    background-color: #17a2b8; /* Màu xanh dương cho Bình luận */
   }
   
   .post__control-btn--delete {
-    background-color: #dc3545;
+    background-color: #dc3545; /* Màu đỏ cho Xóa */
   }
   
   .post__comments {
