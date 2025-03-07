@@ -797,3 +797,91 @@
 #profile-name {
   font-size: 24px;
 }
+
+/* ... (style hiện có giữ nguyên) */
+
+/* Profile Header */
+.profile-header {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: #f0f2f5;
+}
+
+.profile-cover {
+  width: 100%;
+  height: 200px;
+  background: url('https://via.placeholder.com/1200x200') no-repeat center/cover;
+}
+
+.profile-info {
+  text-align: center;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#profile-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  margin-bottom: 10px;
+}
+
+#profile-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Profile Tabs */
+.profile-tabs {
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #65676b;
+}
+
+.tab.active {
+  color: #1877f2;
+  border-bottom: 2px solid #1877f2;
+  font-weight: bold;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.intro-tab {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.intro-tab h2 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.posts-tab, .friends-tab, .photos-tab, .videos-tab, .groups-tab {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}

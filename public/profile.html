@@ -19,14 +19,45 @@
       </div>
     </header>
     <div class="body">
+      <div class="profile-header">
+        <div class="profile-cover"></div>
+        <div class="profile-info">
+          <img id="profile-avatar" src="" alt="Avatar" />
+          <h1 id="profile-name"></h1>
+        </div>
+      </div>
+      <div class="profile-tabs">
+        <button class="tab active" onclick="showTab('intro')">Giới thiệu</button>
+        <button class="tab" onclick="showTab('posts')">Bài viết</button>
+        <button class="tab" onclick="showTab('friends')">Bạn bè</button>
+        <button class="tab" onclick="showTab('photos')">Ảnh</button>
+        <button class="tab" onclick="showTab('videos')">Video</button>
+        <button class="tab" onclick="showTab('groups')">Nhóm</button>
+      </div>
       <div class="grid wide">
         <div class="row">
-          <div class="col l-12 m-12 c-12">
-            <div class="profile-info">
-              <img id="profile-avatar" src="" alt="Avatar" />
-              <h1 id="profile-name"></h1>
-            </div>
+          <div class="col l-4 m-4 c-12 intro-tab tab-content" id="intro-tab">
+            <h2>Giới thiệu</h2>
+            <p>Chưa có thông tin giới thiệu.</p>
+          </div>
+          <div class="col l-8 m-8 c-12 posts-tab tab-content active" id="posts-tab">
             <div class="posts-list"></div>
+          </div>
+          <div class="col l-8 m-8 c-12 friends-tab tab-content" id="friends-tab">
+            <h2>Bạn bè</h2>
+            <p>Chưa có danh sách bạn bè.</p>
+          </div>
+          <div class="col l-8 m-8 c-12 photos-tab tab-content" id="photos-tab">
+            <h2>Ảnh</h2>
+            <p>Chưa có ảnh.</p>
+          </div>
+          <div class="col l-8 m-8 c-12 videos-tab tab-content" id="videos-tab">
+            <h2>Video</h2>
+            <p>Chưa có video.</p>
+          </div>
+          <div class="col l-8 m-8 c-12 groups-tab tab-content" id="groups-tab">
+            <h2>Nhóm</h2>
+            <p>Chưa có nhóm.</p>
           </div>
         </div>
       </div>
@@ -49,13 +80,27 @@
       modalBody.innerHTML = "";
     }
 
+    function showTab(tab) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+      document.querySelector(`button[onclick="showTab('${tab}')"]`).classList.add("active");
+      document.getElementById(`${tab}-tab`).classList.add("active");
+    }
+
     fetch(`${apiUrl}/users/${username}`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("Không tìm thấy người dùng");
+        return res.json();
+      })
       .then(user => {
         document.getElementById("profile-avatar").src = user.avatar ? `data:image/jpeg;base64,${user.avatar}` : "https://via.placeholder.com/100";
         document.getElementById("profile-name").textContent = user.displayName;
       })
-      .catch(error => console.error("Lỗi khi lấy thông tin người dùng:", error));
+      .catch(error => {
+        console.error("Lỗi khi lấy thông tin người dùng:", error);
+        alert("Không tìm thấy người dùng!");
+        window.location.href = "/";
+      });
 
     fetch(`${apiUrl}/posts?page=1&limit=1000`)
       .then(res => res.json())
@@ -119,7 +164,10 @@
 
     function showCommentModal(postId) {
       fetch(`${apiUrl}/posts/${postId}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error("Không tìm thấy bài viết");
+          return res.json();
+        })
         .then(post => {
           modal.classList.remove("hidden");
           const commentModal = document.createElement("div");
@@ -131,7 +179,7 @@
             <h1 class="commentModal__header">Bình luận (${post.comments || 0})</h1>
             <div class="commentModal__body">
               <div class="comments-list" style="max-height: 200px; overflow-y: auto;">
-                ${post.commentsList.map(c => `<p><strong>${c.name}:</strong> ${c.text}</p>`).join("") || "<p>Chưa có bình luận</p>"}
+                ${post.commentsList && post.commentsList.length > 0 ? post.commentsList.map(c => `<p><strong>${c.name}:</strong> ${c.text}</p>`).join("") : "<p>Chưa có bình luận</p>"}
               </div>
             </div>
           `;
