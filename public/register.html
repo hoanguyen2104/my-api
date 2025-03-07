@@ -116,22 +116,25 @@
         method: "POST",
         body: formData,
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (res.status === 201) {
-            alert("Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.");
-            setTimeout(() => {
-              window.location.href = "/login";
-            }, 1000);
-          } else {
-            if (data.message === "Username đã tồn tại") {
-              document.getElementById("registerUsername").classList.add("error");
-              document.getElementById("registerUsername").focus();
-            }
-            alert(data.message);
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then(data => { throw new Error(data.message); });
           }
+          return res.json();
         })
-        .catch((error) => alert("Lỗi khi đăng ký: " + error));
+        .then((data) => {
+          alert("Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.");
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 1000);
+        })
+        .catch((error) => {
+          if (error.message === "Username đã tồn tại") {
+            document.getElementById("registerUsername").classList.add("error");
+            document.getElementById("registerUsername").focus();
+          }
+          alert(error.message);
+        });
     }
   </script>
 </body>

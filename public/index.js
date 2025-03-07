@@ -143,21 +143,48 @@ const App = {
   likePost: function (postId) {
     const likedPosts = App.getLikedPosts();
     const isLiked = likedPosts.includes(postId);
-    if (!isLiked) {
-      fetch(`${App.apiUrl}/posts/${postId}/like`, { method: "PATCH" })
-        .then((res) => res.json())
-        .then((updatedPost) => {
-          const postElement = document.getElementById(`post-${postId}`);
-          postElement.querySelector(".like-quantum").textContent = updatedPost.likes;
-          const likeButton = postElement.querySelector(".post__control-btn--like");
+    const postElement = document.getElementById(`post-${postId}`);
+    const likeButton = postElement.querySelector(".post__control-btn--like");
+    const likeCountElement = postElement.querySelector(".like-quantum");
+    let likeCount = parseInt(likeCountElement.textContent);
+
+    // Chuyển trạng thái ngay lập tức
+    if (isLiked) {
+      likeButton.classList.remove("liked");
+      likeButton.querySelector("span").textContent = "Like";
+      likeCountElement.textContent = likeCount - 1;
+      likedPosts.splice(likedPosts.indexOf(postId), 1);
+    } else {
+      likeButton.classList.add("liked");
+      likeButton.querySelector("span").textContent = "Liked";
+      likeCountElement.textContent = likeCount + 1;
+      likedPosts.push(postId);
+    }
+    localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
+
+    // Gửi request lên server
+    fetch(`${App.apiUrl}/posts/${postId}/${isLiked ? 'unlike' : 'like'}`, { method: "PATCH" })
+      .then((res) => res.json())
+      .then((updatedPost) => {
+        likeCountElement.textContent = updatedPost.likes; // Đồng bộ với server
+      })
+      .catch((error) => {
+        console.error("Lỗi khi cập nhật like:", error);
+        // Hoàn tác nếu lỗi
+        if (isLiked) {
           likeButton.classList.add("liked");
           likeButton.querySelector("span").textContent = "Liked";
+          likeCountElement.textContent = likeCount + 1;
           likedPosts.push(postId);
-          localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
-        })
-        .catch((error) => console.error("Lỗi khi thích bài viết:", error));
-    }
-  },
+        } else {
+          likeButton.classList.remove("liked");
+          likeButton.querySelector("span").textContent = "Like";
+          likeCountElement.textContent = likeCount - 1;
+          likedPosts.splice(likedPosts.indexOf(postId), 1);
+        }
+        localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
+      });
+    },
 
   showCommentModal: function (postId) {
     if (!App.currentUser) {
@@ -182,10 +209,16 @@ const App = {
 
   addComment: function (postId) {
     const text = document.getElementById("commentText").value;
+    const submitButton = document.querySelector(".commentModal__submit");
     if (!text) {
       alert("Vui lòng nhập bình luận!");
       return;
     }
+
+    // Disable nút và đổi text
+    submitButton.disabled = true;
+    submitButton.textContent = "Đang gửi";
+
     fetch(`${App.apiUrl}/posts/${postId}/comment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -200,7 +233,14 @@ const App = {
         commentCount.textContent = `${parseInt(commentCount.textContent) + 1} Bình luận`;
         App.closeModal();
       })
-      .catch((error) => console.error("Lỗi khi thêm bình luận:", error));
+      .catch((error) => {
+        console.error("Lỗi khi thêm bình luận:", error);
+        alert("Lỗi khi gửi bình luận!");
+      })
+      .finally(() => {
+        submitButton.disabled = false;
+        submitButton.textContent = "Gửi";
+      });
   },
 
   deletePost: function (postId) {

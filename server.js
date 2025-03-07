@@ -244,23 +244,43 @@ app.post("/posts", upload.single("image"), async (req, res) => {
   }
 });
 
+
 app.patch("/posts/:id/like", async (req, res) => {
   try {
-    const { id } = req.params;
-    const post = posts.find((p) => p.id === id);
-    if (post) {
-      post.likes += 1;
+    const postId = req.params.id;
+    const postIndex = posts.findIndex((p) => p.id === postId);
+    if (postIndex !== -1) {
+      posts[postIndex].likes = (posts[postIndex].likes || 0) + 1;
       await saveToDrive("posts.json", posts);
-      console.log(`Liked post ${id}, new likes: ${post.likes}`);
-      res.json(post);
+      console.log(`Liked post ${postId}, new likes: ${posts[postIndex].likes}`);
+      res.json(posts[postIndex]);
     } else {
-      res.status(404).json({ message: "Bài viết không tồn tại" });
+      res.status(404).json({ message: "Không tìm thấy bài viết" });
     }
   } catch (error) {
     console.error("Error liking post:", error.message);
     res.status(500).json({ message: "Lỗi server khi thích bài viết" });
   }
 });
+
+app.patch("/posts/:id/unlike", async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const postIndex = posts.findIndex((p) => p.id === postId);
+    if (postIndex !== -1) {
+      posts[postIndex].likes = Math.max((posts[postIndex].likes || 0) - 1, 0);
+      await saveToDrive("posts.json", posts);
+      console.log(`Unliked post ${postId}, new likes: ${posts[postIndex].likes}`);
+      res.json(posts[postIndex]);
+    } else {
+      res.status(404).json({ message: "Không tìm thấy bài viết" });
+    }
+  } catch (error) {
+    console.error("Error unliking post:", error.message);
+    res.status(500).json({ message: "Lỗi server khi hủy thích bài viết" });
+  }
+});
+
 
 app.post("/posts/:id/comment", async (req, res) => {
   try {
