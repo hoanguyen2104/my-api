@@ -93,7 +93,7 @@ const App = {
               <div class="post__header">
                 <div class="post__avatar" style="background-image: url('${postAvatar}');"></div>
                 <div class="post__info">
-                  <h3 class="post__user-name">${e.name}</h3>
+                  <h3 class="post__user-name"><a href="/profile?id=${e.username}">${e.name}</a></h3>
                   <div class="post__info-time">${e.time}</div>
                 </div>
               </div>
@@ -103,11 +103,11 @@ const App = {
                   e.image ? `<img src="data:image/jpeg;base64,${e.image}" alt="image" class="post__image" />` : ""
                 }</div>
                 <div class="post__analysis">
-                  <div class="post__analysis-wrapper">
+                  <div class="post__analysis-wrapper" onclick="App.showLikesModal('${e.id}')">
                     <i class="fa-solid fa-thumbs-up"></i>
                     <span class="like-quantum">${e.likes || 0}</span>
                   </div>
-                  <div class="post__analysis-wrapper">${e.comments || 0} Bình luận</div>
+                  <div class="post__analysis-wrapper" onclick="App.showCommentModal('${e.id}')">${e.comments || 0} Bình luận</div>
                 </div>
                 <div class="post__control">
                   <button class="post__control-btn post__control-btn--like ${isLiked ? 'liked' : ''}" onclick="App.likePost('${e.id}')">
@@ -127,9 +127,7 @@ const App = {
                       : ""
                   }
                 </div>
-                <div class="post__comments">
-                  ${e.commentsList.map((c) => `<p><strong>${c.name}:</strong> ${c.text}</p>`).join("")}
-                </div>
+                <div class="post__comments hidden"></div>
               </div>
             </div>
           </div>`;
@@ -141,6 +139,11 @@ const App = {
   },
 
   likePost: function (postId) {
+    if (!App.currentUser) {
+      alert("Vui lòng đăng nhập để thích bài viết!");
+      window.location.href = "/login";
+      return;
+    }
     const likedPosts = App.getLikedPosts();
     const isLiked = likedPosts.includes(postId);
     const postElement = document.getElementById(`post-${postId}`);
@@ -148,7 +151,6 @@ const App = {
     const likeCountElement = postElement.querySelector(".like-quantum");
     let likeCount = parseInt(likeCountElement.textContent);
 
-    // Chuyển trạng thái ngay lập tức
     if (isLiked) {
       likeButton.classList.remove("liked");
       likeButton.querySelector("span").textContent = "Like";
@@ -162,15 +164,17 @@ const App = {
     }
     localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
 
-    // Gửi request lên server
-    fetch(`${App.apiUrl}/posts/${postId}/${isLiked ? 'unlike' : 'like'}`, { method: "PATCH" })
+    fetch(`${App.apiUrl}/posts/${postId}/${isLiked ? 'unlike' : 'like'}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: App.currentUser.username })
+    })
       .then((res) => res.json())
       .then((updatedPost) => {
-        likeCountElement.textContent = updatedPost.likes; // Đồng bộ với server
+        likeCountElement.textContent = updatedPost.likes;
       })
       .catch((error) => {
         console.error("Lỗi khi cập nhật like:", error);
-        // Hoàn tác nếu lỗi
         if (isLiked) {
           likeButton.classList.add("liked");
           likeButton.querySelector("span").textContent = "Liked";
@@ -184,7 +188,52 @@ const App = {
         }
         localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
       });
-    },
+  },
+
+  showLikesModal: function (postId) {
+    const post = posts.find(p => p.id === postId);
+    modal.classList.remove("hidden");
+    const likesModal = document.createElement("div");
+    likesModal.classList.add("commentModal");
+    likesModal.innerHTML = `
+      <div class="commentModal__close" onclick="App.closeModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </div>
+      <h1 class="commentModal__header">Người thích (${post.likes || 0})</h1>
+      <div class="commentModal__body">
+        <ul style="list-style: none; padding: 0;">
+          ${post.likedBy.map(username => `<li>${username}</li>`).join("")}
+        </ul>
+      </div>
+    `;
+    modalBody.appendChild(likesModal);
+  },
+
+  showCommentModal: function (postId) {
+    if (!App.currentUser) {
+      window.location.href = "/login";
+      return;
+    }
+    const post = posts.find(p => p.id === postId);
+    modal.classList.remove("hidden");
+    const commentModal = document.createElement("div");
+    commentModal.classList.add("commentModal");
+    commentModal.innerHTML = `
+      <div class="commentModal__close" onclick="App.closeModal()">
+        <i class="fa-solid fa-xmark"></i>
+      </div>
+      <h1 class="commentModal__header">Bình luận (${post.comments || 0})</h1>
+      <div class="commentModal__body">
+        <div class="comments-list" style="max-height: 200px; overflow-y: auto;">
+          ${post.commentsList.map(c => `<p><strong>${c.name}:</strong> ${c.text}</p>`).join("")}
+        </div>
+        <textarea id="commentText" placeholder="Viết bình luận..."></textarea>
+        <button class="btn commentModal__submit" onclick="App.addComment('${postId}')">Gửi</button>
+      </div>
+    `;
+    modalBody.appendChild(commentModal);
+  },
+
 
   showCommentModal: function (postId) {
     if (!App.currentUser) {

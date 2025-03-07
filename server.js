@@ -219,38 +219,43 @@ app.get("/posts", (req, res) => {
   }
 });
 
+
 app.post("/posts", upload.single("image"), async (req, res) => {
   try {
     const newPost = {
       id: Date.now().toString(),
-      username: req.body.username || "", // Thêm username của người tạo
+      username: req.body.username || "",
       name: req.body.name,
       content: req.body.content || "",
-      likes: parseInt(req.body.likes) || 0,
-      comments: parseInt(req.body.comments) || 0,
+      likes: 0,
+      comments: 0,
+      likedBy: [], // Thêm danh sách người Like
       codePass: req.body.codePass || "",
       time: req.body.time || new Date().toISOString(),
       image: req.file ? req.file.buffer.toString("base64") : null,
       commentsList: [],
     };
-
     posts.push(newPost);
     await saveToDrive("posts.json", posts);
     console.log("Created post:", newPost);
     res.status(201).json(newPost);
   } catch (error) {
     console.error("Error creating post:", error.message);
-    res.status(500).json({ message: "Lỗi server khi tạo bài viết", error: error.message });
+    res.status(500).json({ message: "Lỗi server khi tạo bài viết" });
   }
 });
-
 
 app.patch("/posts/:id/like", async (req, res) => {
   try {
     const postId = req.params.id;
+    const username = req.body.username; // Yêu cầu gửi username
     const postIndex = posts.findIndex((p) => p.id === postId);
     if (postIndex !== -1) {
-      posts[postIndex].likes = (posts[postIndex].likes || 0) + 1;
+      if (!username) return res.status(401).json({ message: "Chưa đăng nhập" });
+      if (!posts[postIndex].likedBy.includes(username)) {
+        posts[postIndex].likes = (posts[postIndex].likes || 0) + 1;
+        posts[postIndex].likedBy.push(username);
+      }
       await saveToDrive("posts.json", posts);
       console.log(`Liked post ${postId}, new likes: ${posts[postIndex].likes}`);
       res.json(posts[postIndex]);
@@ -266,9 +271,15 @@ app.patch("/posts/:id/like", async (req, res) => {
 app.patch("/posts/:id/unlike", async (req, res) => {
   try {
     const postId = req.params.id;
+    const username = req.body.username;
     const postIndex = posts.findIndex((p) => p.id === postId);
     if (postIndex !== -1) {
-      posts[postIndex].likes = Math.max((posts[postIndex].likes || 0) - 1, 0);
+      if (!username) return res.status(401).json({ message: "Chưa đăng nhập" });
+      const likeIndex = posts[postIndex].likedBy.indexOf(username);
+      if (likeIndex !== -1) {
+        posts[postIndex].likes = Math.max((posts[postIndex].likes || 0) - 1, 0);
+        posts[postIndex].likedBy.splice(likeIndex, 1);
+      }
       await saveToDrive("posts.json", posts);
       console.log(`Unliked post ${postId}, new likes: ${posts[postIndex].likes}`);
       res.json(posts[postIndex]);

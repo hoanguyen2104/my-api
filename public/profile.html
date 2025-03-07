@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trang cá nhân - HoangN</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/grid.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="grid wide">
+        <div class="row">
+          <div class="header__logo"></div>
+          <a href="/" class="btn" style="position: absolute; right: 20px; top: 20px;">Trang chủ</a>
+        </div>
+      </div>
+    </header>
+    <div class="body">
+      <div class="grid wide">
+        <div class="row">
+          <div class="col l-12 m-12 c-12">
+            <div class="profile-info">
+              <img id="profile-avatar" src="" alt="Avatar" />
+              <h1 id="profile-name"></h1>
+            </div>
+            <div class="posts-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const apiUrl = "https://my-api-vao1.onrender.com";
+    const urlParams = new URLSearchParams(window.location.search);
+    const username = urlParams.get("id");
+
+    fetch(`${apiUrl}/users/${username}`)
+      .then(res => res.json())
+      .then(user => {
+        document.getElementById("profile-avatar").src = user.avatar ? `data:image/jpeg;base64,${user.avatar}` : "https://via.placeholder.com/100";
+        document.getElementById("profile-name").textContent = user.displayName;
+      })
+      .catch(error => console.error("Lỗi khi lấy thông tin người dùng:", error));
+
+    fetch(`${apiUrl}/posts?page=1&limit=1000`)
+      .then(res => res.json())
+      .then(data => {
+        const postsList = document.querySelector(".posts-list");
+        const userPosts = data.posts.filter(post => post.username === username);
+        userPosts.forEach(post => {
+          postsList.innerHTML += `
+            <div class="content__wrapper">
+              <div class="post">
+                <div class="post__header">
+                  <div class="post__avatar" style="background-image: url('${post.avatar ? `data:image/jpeg;base64,${post.avatar}` : "https://via.placeholder.com/50"}');"></div>
+                  <div class="post__info">
+                    <h3 class="post__user-name">${post.name}</h3>
+                    <div class="post__info-time">${post.time}</div>
+                  </div>
+                </div>
+                <div class="post__content">
+                  <p class="post__paragraph">${post.content}</p>
+                  ${post.image ? `<img src="data:image/jpeg;base64,${post.image}" alt="image" class="post__image" />` : ""}
+                </div>
+              </div>
+            </div>`;
+        });
+      })
+      .catch(error => console.error("Lỗi khi lấy bài viết:", error));
+  </script>
+</body>
+</html>
