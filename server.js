@@ -218,7 +218,20 @@ app.get("/posts", (req, res) => {
     res.status(500).json({ message: "Lỗi server khi lấy bài viết", error: error.message });
   }
 });
-
+app.get("/posts/:id", (req, res) => {
+  try {
+    const postId = req.params.id;
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      res.json(post);
+    } else {
+      res.status(404).json({ message: "Không tìm thấy bài viết" });
+    }
+  } catch (error) {
+    console.error("Error fetching post:", error.message);
+    res.status(500).json({ message: "Lỗi server khi lấy bài viết" });
+  }
+});
 
 app.post("/posts", upload.single("image"), async (req, res) => {
   try {

@@ -55,6 +55,12 @@ const App = {
       userInfo.classList.remove("hidden");
       userAvatar.src = App.currentUser.avatar ? `data:image/jpeg;base64,${App.currentUser.avatar}` : "https://via.placeholder.com/40";
       userDisplayName.textContent = App.currentUser.displayName;
+      // Cập nhật logout-menu với username
+      const logoutMenu = document.getElementById("logout-menu");
+      logoutMenu.innerHTML = `
+        <button class="btn" onclick="window.location.href='/profile?id=${App.currentUser.username}'">Xem trang cá nhân</button>
+        <button class="btn" onclick="App.logout()">Đăng xuất</button>
+      `;
     } else {
       authButtons.classList.remove("hidden");
       userInfo.classList.add("hidden");
@@ -191,22 +197,29 @@ const App = {
   },
 
   showLikesModal: function (postId) {
-    const post = posts.find(p => p.id === postId);
     modal.classList.remove("hidden");
-    const likesModal = document.createElement("div");
-    likesModal.classList.add("commentModal");
-    likesModal.innerHTML = `
-      <div class="commentModal__close" onclick="App.closeModal()">
-        <i class="fa-solid fa-xmark"></i>
-      </div>
-      <h1 class="commentModal__header">Người thích (${post.likes || 0})</h1>
-      <div class="commentModal__body">
-        <ul style="list-style: none; padding: 0;">
-          ${post.likedBy.map(username => `<li>${username}</li>`).join("")}
-        </ul>
-      </div>
-    `;
-    modalBody.appendChild(likesModal);
+    fetch(`${App.apiUrl}/posts/${postId}`)
+      .then(res => res.json())
+      .then(post => {
+        const likesModal = document.createElement("div");
+        likesModal.classList.add("commentModal");
+        likesModal.innerHTML = `
+          <div class="commentModal__close" onclick="App.closeModal()">
+            <i class="fa-solid fa-xmark"></i>
+          </div>
+          <h1 class="commentModal__header">Người thích (${post.likes || 0})</h1>
+          <div class="commentModal__body">
+            <ul style="list-style: none; padding: 0;">
+              ${post.likedBy && post.likedBy.length > 0 ? post.likedBy.map(username => `<li>${username}</li>`).join("") : "<li>Chưa có ai thích</li>"}
+            </ul>
+          </div>
+        `;
+        modalBody.appendChild(likesModal);
+      })
+      .catch(error => {
+        console.error("Lỗi khi lấy danh sách Like:", error);
+        alert("Không thể tải danh sách người thích!");
+      });
   },
 
   showCommentModal: function (postId) {

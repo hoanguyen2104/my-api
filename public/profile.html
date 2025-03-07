@@ -32,10 +32,22 @@
       </div>
     </div>
   </div>
+  <div class="modal hidden">
+    <div class="overlay"></div>
+    <div class="modal__body"></div>
+  </div>
   <script>
     const apiUrl = "https://my-api-vao1.onrender.com";
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get("id");
+    const modal = document.querySelector(".modal");
+    const modalBody = document.querySelector(".modal__body");
+    const overlay = document.querySelector(".overlay");
+
+    function closeModal() {
+      modal.classList.add("hidden");
+      modalBody.innerHTML = "";
+    }
 
     fetch(`${apiUrl}/users/${username}`)
       .then(res => res.json())
@@ -50,26 +62,86 @@
       .then(data => {
         const postsList = document.querySelector(".posts-list");
         const userPosts = data.posts.filter(post => post.username === username);
-        userPosts.forEach(post => {
-          postsList.innerHTML += `
-            <div class="content__wrapper">
-              <div class="post">
-                <div class="post__header">
-                  <div class="post__avatar" style="background-image: url('${post.avatar ? `data:image/jpeg;base64,${post.avatar}` : "https://via.placeholder.com/50"}');"></div>
-                  <div class="post__info">
-                    <h3 class="post__user-name">${post.name}</h3>
-                    <div class="post__info-time">${post.time}</div>
-                  </div>
-                </div>
-                <div class="post__content">
-                  <p class="post__paragraph">${post.content}</p>
-                  ${post.image ? `<img src="data:image/jpeg;base64,${post.image}" alt="image" class="post__image" />` : ""}
+        postsList.innerHTML = userPosts.map(post => `
+          <div class="content__wrapper">
+            <div class="post" id="post-${post.id}">
+              <div class="post__header">
+                <div class="post__avatar" style="background-image: url('${post.avatar ? `data:image/jpeg;base64,${post.avatar}` : "https://via.placeholder.com/50"}');"></div>
+                <div class="post__info">
+                  <h3 class="post__user-name">${post.name}</h3>
+                  <div class="post__info-time">${post.time}</div>
                 </div>
               </div>
-            </div>`;
-        });
+              <div class="post__content">
+                <p class="post__paragraph">${post.content}</p>
+                ${post.image ? `<img src="data:image/jpeg;base64,${post.image}" alt="image" class="post__image" />` : ""}
+                <div class="post__analysis">
+                  <div class="post__analysis-wrapper" onclick="showLikesModal('${post.id}')">
+                    <i class="fa-solid fa-thumbs-up"></i>
+                    <span class="like-quantum">${post.likes || 0}</span>
+                  </div>
+                  <div class="post__analysis-wrapper" onclick="showCommentModal('${post.id}')">${post.comments || 0} Bình luận</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join("");
+
+        overlay.onclick = closeModal;
       })
       .catch(error => console.error("Lỗi khi lấy bài viết:", error));
+
+    function showLikesModal(postId) {
+      fetch(`${apiUrl}/posts/${postId}`)
+        .then(res => res.json())
+        .then(post => {
+          modal.classList.remove("hidden");
+          const likesModal = document.createElement("div");
+          likesModal.classList.add("commentModal");
+          likesModal.innerHTML = `
+            <div class="commentModal__close" onclick="closeModal()">
+              <i class="fa-solid fa-xmark"></i>
+            </div>
+            <h1 class="commentModal__header">Người thích (${post.likes || 0})</h1>
+            <div class="commentModal__body">
+              <ul style="list-style: none; padding: 0;">
+                ${post.likedBy && post.likedBy.length > 0 ? post.likedBy.map(username => `<li>${username}</li>`).join("") : "<li>Chưa có ai thích</li>"}
+              </ul>
+            </div>
+          `;
+          modalBody.appendChild(likesModal);
+        })
+        .catch(error => {
+          console.error("Lỗi khi lấy danh sách Like:", error);
+          alert("Không thể tải danh sách người thích!");
+        });
+    }
+
+    function showCommentModal(postId) {
+      fetch(`${apiUrl}/posts/${postId}`)
+        .then(res => res.json())
+        .then(post => {
+          modal.classList.remove("hidden");
+          const commentModal = document.createElement("div");
+          commentModal.classList.add("commentModal");
+          commentModal.innerHTML = `
+            <div class="commentModal__close" onclick="closeModal()">
+              <i class="fa-solid fa-xmark"></i>
+            </div>
+            <h1 class="commentModal__header">Bình luận (${post.comments || 0})</h1>
+            <div class="commentModal__body">
+              <div class="comments-list" style="max-height: 200px; overflow-y: auto;">
+                ${post.commentsList.map(c => `<p><strong>${c.name}:</strong> ${c.text}</p>`).join("")}
+              </div>
+            </div>
+          `;
+          modalBody.appendChild(commentModal);
+        })
+        .catch(error => {
+          console.error("Lỗi khi lấy danh sách bình luận:", error);
+          alert("Không thể tải danh sách bình luận!");
+        });
+    }
   </script>
 </body>
 </html>

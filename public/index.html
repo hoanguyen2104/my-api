@@ -22,6 +22,7 @@
         <img id="user-avatar" src="" alt="Avatar" onclick="toggleLogoutMenu()" />
         <span id="user-display-name"></span>
         <div id="logout-menu" class="logout-menu hidden">
+          <button class="btn" onclick="window.location.href='/profile?id=${App.currentUser.username}'">Xem trang cá nhân</button>
           <button class="btn" onclick="App.logout()">Đăng xuất</button>
         </div>
       </div>
