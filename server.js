@@ -363,6 +363,10 @@ app.delete("/posts/:id", async (req, res) => {
   }
 });
 
+app.get("/profile", (req, res) => {
+  res.sendFile(__dirname + "/public/profile.html");
+});
+
 app.post("/admin/login", (req, res) => {
   try {
     const { password } = req.body;
